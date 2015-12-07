@@ -15,7 +15,7 @@ GenericController::~GenericController()
 {
 }
 
-bool GenericController::configure(tue::Configuration& config, double sample_time)
+void GenericController::configure(tue::Configuration& config, double sample_time)
 {
     //! Clear the filters (required for reconfiguring)
     filters_.clear();
@@ -24,7 +24,7 @@ bool GenericController::configure(tue::Configuration& config, double sample_time
     config.value("gain", gain_);
 
     //! Get the filters
-    if (config.readGroup("filters", tue::REQUIRED))
+    if (config.readGroup("filters"))
     {
         if (config.readGroup("weak_integrator"))
         {
@@ -90,15 +90,16 @@ bool GenericController::configure(tue::Configuration& config, double sample_time
         // end filters
         config.endGroup();
     }
-
-    return config.hasError();
 }
 
-bool GenericController::update(double measurement, double reference, double feed_forward)
+void GenericController::update(const ControllerInput& input)
 {
+    if (!is_set(input.pos_reference) || !is_set(input.pos_measurement))
+        return;
+
     //! 1) Calculate the error
 
-    output_ = reference - measurement;
+    output_ = input.pos_reference - input.pos_measurement;
 
     //! 2) Apply gain
 
@@ -134,10 +135,10 @@ bool GenericController::update(double measurement, double reference, double feed
         output_ = filters_.second_order_low_pass->getOutput();
     }
 
-    //! 4) Apply feed forward
-    output_ += feed_forward;
+//    //! 4) Apply feed forward
+//    output_ += feed_forward;
 
-    return true;
+    return;
 }
 
 }

@@ -1,0 +1,17 @@
+sample_time: 0.001
+controllers:
+- name: torso
+  type: generic
+  gain: -80
+  filters:
+    weak_integrator:
+      fz: 0.03
+    lead_lag:
+      fz: 1.6
+      fp: 60
+    second_order_low_pass:
+      fp: 20
+      dp: 0.7
+  homing:
+    velocity: 0.01
+    acceleration: 0.02

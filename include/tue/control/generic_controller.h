@@ -66,7 +66,7 @@ public:
     @param config The configuration of the controller
     @param sample_time The sample time of the controller
     */
-    bool configure(tue::Configuration &config, double sample_time);
+    void configure(tue::Configuration &config, double sample_time);
 
     /// Controller update
     /**
@@ -75,7 +75,7 @@ public:
     @param measurement measurement provided by the sensor
     @param reference provided by the user
     */
-    bool update(double measurement, double reference, double feed_forward);
+    void update(const ControllerInput& input);
 
 protected:
 

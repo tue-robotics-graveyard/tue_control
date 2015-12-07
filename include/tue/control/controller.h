@@ -3,6 +3,8 @@
 
 #include <tue/config/configuration.h>
 
+#include "tue/control/controller_input.h"
+
 namespace tue
 {
 
@@ -30,7 +32,7 @@ public:
     Function used to configure the specific controller
     @param config The configuration of the controller
     */
-    virtual bool configure(tue::Configuration& config, double sample_time) = 0;
+    virtual void configure(tue::Configuration& config, double sample_time) = 0;
 
     /// Controller update
     /**
@@ -40,7 +42,7 @@ public:
     @param reference provided by the user
     @param feed_forward (optional) feed_forward parameter that is added to the output
     */
-    virtual bool update(double measurement, double reference, double feed_forward) = 0;
+    virtual void update(const ControllerInput& input) = 0;
 
     /// Get current output of the controller
     /** @return current output of the controller
