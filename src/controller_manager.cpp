@@ -273,10 +273,8 @@ void ControllerManager::update()
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Check safety
 
-        if (is_set(c.output.error) && c.output.error > c.max_error)
+        if (is_set(c.output.error) && std::abs(c.output.error) > c.max_error)
         {
-
-            std::cout << "MAX ERROR" << std::endl;
             c.output.value = 0;
             c.status = ERROR;
         }
