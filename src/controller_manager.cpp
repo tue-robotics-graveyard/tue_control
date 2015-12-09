@@ -67,7 +67,6 @@ void ControllerManager::configure(tue::Configuration& config)
 
         if (config.readGroup("homing"))
         {
-            data.homed = true;
             data.state = UNINITIALIZED;
             config.value("velocity", data.homing_max_vel);
             config.value("acceleration", data.homing_max_acc);
@@ -75,7 +74,6 @@ void ControllerManager::configure(tue::Configuration& config)
         }
         else
         {
-            data.homed = true;
             data.state = READY;
         }
     }

@@ -38,7 +38,7 @@ enum ControllerState
 
 struct ControllerData
 {
-    ControllerData() : state(UNINITIALIZED), measurement_offset(0) {}
+    ControllerData() : state(UNINITIALIZED), measurement_offset(0), zero_measurement_set(false) {}
 
     std::string name;
     Controller* controller;
@@ -49,7 +49,6 @@ struct ControllerData
     double measurement_offset;
 
     // Homing
-    bool homed;
     bool homing_pos_initialized;
     double homing_pos;
     double homing_vel;
