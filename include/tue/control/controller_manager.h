@@ -56,6 +56,10 @@ struct ControllerData
     double homing_max_acc;
     double zero_measurement;
     bool zero_measurement_set;
+
+    // Homing preconditions
+    std::vector<std::string> precondition_homed_joints;
+    std::vector<unsigned int> precondition_homed_joint_idx;
 };
 
 // ----------------------------------------------------------------------------------------------------
@@ -84,6 +88,18 @@ public:
 
     /// Set the input for the controller with the given index
     void setInput(unsigned int idx, const ControllerInput& input) { controllers_[idx].input = input; }
+
+    /// Set the measurement for the controller with the given index
+    void setMeasurement(unsigned int idx, double m) { controllers_[idx].input.measurement = m; }
+
+    /// Set the reference for the controller with the given index
+    void setReference(unsigned int idx, double pos, double vel = 0, double acc = 0)
+    {
+        ControllerData& c = controllers_[idx];
+        c.input.pos_reference = pos;
+        c.input.vel_reference = vel;
+        c.input.acc_reference = acc;
+    }
 
     /// Get the output of the controller with the given index
     double getOutput(unsigned int idx) const { return controllers_[idx].output; }

@@ -27,19 +27,26 @@ int main(int argc, char **argv)
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     unsigned int idx = manager.getControllerIdx("torso");
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     manager.startHoming(idx);
 
-    tue::control::ControllerInput input;
-    input.pos_reference = 0.41;
-    input.measurement = 0.1;
+    for(unsigned int i = 0; i < 100; ++i)
+    {
+        manager.setMeasurement(idx, 0.1);
+        manager.update();
+    }
 
     manager.setZeroMeasurement(idx, 0.1);
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    manager.setReference(idx, 0.41, 0, 0);
+
     for(unsigned int i = 0; i < 100; ++i)
     {
-        manager.setInput(idx, input);
+        manager.setMeasurement(idx, 0.1);
         manager.update();
 
         std::cout << manager.getOutput(idx) << std::endl;

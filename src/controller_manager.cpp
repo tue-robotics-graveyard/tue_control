@@ -3,6 +3,8 @@
 #include "tue/control/generic_controller.h"
 #include "tue/control/setpoint_controller.h"
 
+#include <sstream>
+
 namespace tue
 {
 
@@ -71,6 +73,30 @@ void ControllerManager::configure(tue::Configuration& config)
             config.value("velocity", data.homing_max_vel);
             config.value("acceleration", data.homing_max_acc);
             data.homing_max_acc = std::abs(data.homing_max_acc);
+
+            // Read preconditions config
+            if (config.readArray("preconditions"))
+            {
+                while(config.nextArrayItem())
+                {
+                    std::string homed_joint;
+                    if (config.value("homed", homed_joint, tue::OPTIONAL))
+                    {
+                        data.precondition_homed_joints.push_back(homed_joint);
+                    }
+                    else
+                    {
+                        std::stringstream s;
+                        s << config;
+                        config.addError("Unknown precondition: " + s.str());
+                    }
+
+                }
+
+                config.endArray();
+            }
+
+            config.endGroup();
         }
         else
         {
@@ -79,6 +105,29 @@ void ControllerManager::configure(tue::Configuration& config)
     }
 
     config.endArrayItem();
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    for(std::vector<ControllerData>::iterator it = controllers_.begin(); it != controllers_.end(); ++it)
+    {
+        ControllerData& c = *it;
+
+        c.precondition_homed_joint_idx.resize(c.precondition_homed_joints.size());
+        for(unsigned int i = 0; i < c.precondition_homed_joints.size(); ++i)
+        {
+            int idx = getControllerIdx(c.precondition_homed_joints[i]);
+
+            if (idx < 0)
+            {
+                config.addError("Homing procedure of controller '" + c.name+ "' depends on non-existing controller '"
+                                + c.precondition_homed_joints[i] + "'");
+            }
+            else
+            {
+                c.precondition_homed_joint_idx[i] = idx;
+            }
+        }
+    }
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -94,7 +143,7 @@ void ControllerManager::update()
 
         if (!is_set(c.input.measurement))
         {
-            std::cout << "Input not set for controller '" << c.name << "'" << std::endl;
+            std::cout << "Measurement not set for controller '" << c.name << "'" << std::endl;
             continue;
         }
 
@@ -121,6 +170,26 @@ void ControllerManager::update()
 
         if (c.state == HOMING)
         {
+            // - - - - - - - - - - - - - - - - - - - - - - - - -
+            // Check if all preconditions are met
+
+            bool conditions_met = true;
+            for(std::vector<unsigned int>::const_iterator it = c.precondition_homed_joint_idx.begin();
+                it != c.precondition_homed_joint_idx.end(); ++it)
+            {
+                ControllerData& other = controllers_[*it];
+                if (other.state != READY)
+                {
+                    conditions_met = false;
+                    break;
+                }
+            }
+
+            if (!conditions_met)
+                continue;
+
+            // - - - - - - - - - - - - - - - - - - - - - - - - -
+
             if (!c.homing_pos_initialized)
             {
                 // First time we enter the homing loop, so set current position based on measurement
