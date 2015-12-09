@@ -1,5 +1,35 @@
 #include <tue/control/controller_manager.h>
 
+// ----------------------------------------------------------------------------------------------------
+
+class Plant
+{
+
+public:
+
+    void setMass(double mass) { mass_ = mass; }
+
+    void setPosition(double pos) { pos_ = pos; vel_ = 0; }
+
+    void update(double f, double dt)
+    {
+        double a = f / mass_;
+        vel_ += dt * a;
+        pos_ += dt * vel_;
+    }
+
+    double position() const { return pos_; }
+
+private:
+
+    double mass_;
+    double pos_;
+    double vel_;
+
+};
+
+// ----------------------------------------------------------------------------------------------------
+
 int main(int argc, char **argv)
 {
     if (argc != 2)
@@ -28,28 +58,55 @@ int main(int argc, char **argv)
 
     unsigned int idx = manager.getControllerIdx("torso");
 
+    Plant torso;
+    torso.setMass(-1);
+    torso.setPosition(100);
+
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    int t = 0;
 
     manager.startHoming(idx);
 
-    for(unsigned int i = 0; i < 100; ++i)
+    while(true)
     {
-        manager.setMeasurement(idx, 0.1);
+        if (torso.position() >= 100.2)
+        {
+            manager.setZeroMeasurement(idx, 0.4);
+            break;
+        }
+
+        manager.setMeasurement(idx, torso.position());
         manager.update();
+        torso.update(manager.getOutput(idx), manager.dt());
+
+        if (t % 100 == 0)
+            std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
+
+        ++t;
     }
 
-    manager.setZeroMeasurement(idx, 0.1);
+    manager.stopHoming(idx);
+
+    std::cout << "-------------------------------------------------------------" << std::endl;
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    manager.setReference(idx, 0.41, 0, 0);
+    manager.setReference(idx, 0.1);
 
-    for(unsigned int i = 0; i < 100; ++i)
+    while(true)
     {
-        manager.setMeasurement(idx, 0.1);
+        manager.setMeasurement(idx, torso.position());
         manager.update();
+        torso.update(manager.getOutput(idx), manager.dt());
 
-        std::cout << manager.getOutput(idx) << std::endl;
+        if (t % 100 == 0)
+            std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
+
+        if (t > 30000)
+            break;
+
+        ++t;
     }
 
     return 0;

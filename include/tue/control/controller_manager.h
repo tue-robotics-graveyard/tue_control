@@ -45,6 +45,7 @@ struct ControllerData
     ControllerState state;
     ControllerInput input;
     double output;
+    double corrected_measurement;
 
     double measurement_offset;
 
@@ -107,6 +108,8 @@ public:
     /// Get the state of the controller with the given index
     ControllerState getState(unsigned int idx) const { return controllers_[idx].state; }
 
+    double getMeasurement(unsigned int idx) { return controllers_[idx].corrected_measurement; }
+
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Homing
@@ -153,6 +156,8 @@ public:
     {
         controller_types_[name] = _createController<T>;
     }
+
+    double dt() const { return dt_; }
 
 private:
 

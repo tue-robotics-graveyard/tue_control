@@ -228,6 +228,7 @@ void ControllerManager::update()
         // Apply measurement correction
 
         c.input.measurement += c.measurement_offset;
+        c.corrected_measurement = c.input.measurement;
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Update controller
