@@ -13,7 +13,8 @@ namespace control
 
 ControllerManager::ControllerManager()
 {
-
+    registerControllerType<GenericController>("generic");
+    registerControllerType<SetpointController>("setpoint");
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -49,12 +50,8 @@ void ControllerManager::configure(tue::Configuration& config)
             continue;
         }
 
-        Controller* c = NULL;
-        if (type == "generic")
-            c = new GenericController;
-        else if (type == "setpoint")
-            c = new SetpointController;
-        else
+        Controller* c = createController(type);
+        if (!c)
         {
             config.addError("Unknown controller type: '" + type + "'");
             continue;
