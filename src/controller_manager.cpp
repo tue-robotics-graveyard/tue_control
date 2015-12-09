@@ -67,6 +67,19 @@ void ControllerManager::configure(tue::Configuration& config)
         data.controller = c;
         data.name = name;
 
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Configure safety
+
+        if (config.readGroup("safety"))
+        {
+            config.value("output_saturation", data.output_saturation, tue::OPTIONAL);
+            config.value("max_error", data.max_error, tue::OPTIONAL);
+            config.endGroup(); // End safety
+        }
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Configure homing
+
         if (config.readGroup("homing"))
         {
             data.status = UNINITIALIZED;
@@ -243,7 +256,7 @@ void ControllerManager::update()
         c.controller->update(c.input, c.output);
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        // Check output
+        // Check output validity
 
         if (!is_set(c.output.value))
         {
@@ -255,6 +268,26 @@ void ControllerManager::update()
         {
             std::cout << "Controller '" + c.name << "' did not properly provide error" << std::endl;
             c.output.value = 0;
+        }
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Check safety
+
+        if (is_set(c.output.error) && c.output.error > c.max_error)
+        {
+
+            std::cout << "MAX ERROR" << std::endl;
+            c.output.value = 0;
+            c.status = ERROR;
+        }
+
+        // Output saturation
+        if (is_set(c.output_saturation))
+        {
+            if (c.output.value < -c.output_saturation)
+                c.output.value = -c.output_saturation;
+            else if (c.output.value > c.output_saturation)
+                c.output.value = c.output_saturation;
         }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

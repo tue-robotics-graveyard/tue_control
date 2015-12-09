@@ -37,7 +37,8 @@ enum ControllerStatus
 
 struct ControllerData
 {
-    ControllerData() : status(UNINITIALIZED), measurement_offset(0), zero_measurement_set(false) {}
+    ControllerData() : status(UNINITIALIZED), measurement_offset(0), zero_measurement_set(false),
+    max_error(INVALID_DOUBLE), output_saturation(INVALID_DOUBLE) {}
 
     // - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -60,6 +61,12 @@ struct ControllerData
     // Measurement correction
 
     double measurement_offset;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - -
+    // Safety
+
+    double max_error;
+    double output_saturation;
 
     // - - - - - - - - - - - - - - - - - - - - - - - -
     // Homing

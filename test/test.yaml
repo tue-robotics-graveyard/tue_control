@@ -19,8 +19,8 @@ controllers:
     acceleration: 0.3
     direction: -1 
   safety:
-    max_error: 0.02         # TODO
-    output_saturation: 50   # TODO
+    max_error: 10
+    output_saturation: 1
   homing:
     velocity: 0.01
     acceleration: 0.02
