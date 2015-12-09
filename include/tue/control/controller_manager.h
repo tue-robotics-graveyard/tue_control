@@ -26,12 +26,37 @@ Controller* _createController() { return new T; }
 
 // ----------------------------------------------------------------------------------------------------
 
+enum ControllerState
+{
+    ERROR,
+    UNINITIALIZED,
+    HOMING,
+    READY
+};
+
+// ----------------------------------------------------------------------------------------------------
+
 struct ControllerData
 {
+    ControllerData() : state(UNINITIALIZED), measurement_offset(0) {}
+
     std::string name;
     Controller* controller;
+    ControllerState state;
     ControllerInput input;
     double output;
+
+    double measurement_offset;
+
+    // Homing
+    bool homed;
+    bool homing_pos_initialized;
+    double homing_pos;
+    double homing_vel;
+    double homing_max_vel;
+    double homing_max_acc;
+    double zero_measurement;
+    bool zero_measurement_set;
 };
 
 // ----------------------------------------------------------------------------------------------------
@@ -62,7 +87,39 @@ public:
     void setInput(unsigned int idx, const ControllerInput& input) { controllers_[idx].input = input; }
 
     /// Get the output of the controller with the given index
-    double getOutput(unsigned int idx) const;
+    double getOutput(unsigned int idx) const { return controllers_[idx].output; }
+
+    /// Get the state of the controller with the given index
+    ControllerState getState(unsigned int idx) const { return controllers_[idx].state; }
+
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Homing
+
+    void startHoming(unsigned int idx)
+    {
+        controllers_[idx].state = HOMING;
+        controllers_[idx].homing_pos_initialized = false;
+        controllers_[idx].zero_measurement_set = false;
+    }
+
+    void stopHoming(unsigned int idx)
+    {
+        controllers_[idx].state = UNINITIALIZED;
+    }
+
+    void setZeroMeasurement(unsigned int idx, double v)
+    {
+        controllers_[idx].zero_measurement = v;
+        controllers_[idx].zero_measurement_set = true;
+    }
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    void setError(unsigned int idx) { controllers_[idx].state = ERROR; }
+
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     /// Given the controller name, looks up the index of the controller. Returns -1 if it does not exist
     int getControllerIdx(const std::string& name) const
@@ -83,6 +140,8 @@ public:
     }
 
 private:
+
+    double dt_;
 
     /// List of controllers, inluding some meta-data
     std::vector<ControllerData> controllers_;

@@ -94,12 +94,12 @@ void GenericController::configure(tue::Configuration& config, double sample_time
 
 void GenericController::update(const ControllerInput& input)
 {
-    if (!is_set(input.pos_reference) || !is_set(input.pos_measurement))
+    if (!is_set(input.pos_reference) || !is_set(input.measurement))
         return;
 
     //! 1) Calculate the error
 
-    output_ = input.pos_reference - input.pos_measurement;
+    output_ = input.pos_reference - input.measurement;
 
     //! 2) Apply gain
 

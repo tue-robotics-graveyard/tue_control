@@ -17,8 +17,7 @@ struct ControllerInput
 {
     ControllerInput()
         : pos_reference(INVALID_DOUBLE), vel_reference(INVALID_DOUBLE),
-          acc_reference(INVALID_DOUBLE), pos_measurement(INVALID_DOUBLE),
-          vel_measurement(INVALID_DOUBLE), acc_measurement(INVALID_DOUBLE) {}
+          acc_reference(INVALID_DOUBLE), measurement(INVALID_DOUBLE) {}
 
     /// Position reference
     double pos_reference;
@@ -29,14 +28,9 @@ struct ControllerInput
     /// Acceleration reference
     double acc_reference;
 
-    /// Position measurement
-    double pos_measurement;
+    /// measurement
+    double measurement;
 
-    /// Velocity measurement
-    double vel_measurement;
-
-    /// Acceleration measurement
-    double acc_measurement;
 };
 
 } // end namespace tue
