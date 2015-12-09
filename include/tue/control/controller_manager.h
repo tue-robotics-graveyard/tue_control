@@ -121,7 +121,7 @@ public:
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Controller getters
 
-    unsigned int getNumControllers(unsigned int idx) const { return controllers_.size(); }
+    unsigned int getNumControllers() const { return controllers_.size(); }
 
     /// Get the output of the controller with the given index
     double getOutput(unsigned int idx) const { return controllers_[idx].output.value; }
