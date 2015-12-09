@@ -1,17 +1,12 @@
 #ifndef _CONTROLLER_INPUT_H_
 #define _CONTROLLER_INPUT_H_
 
-#include <limits>
-#include <cmath>
+#include "tue/control/generic.h"
 
 namespace tue
 {
 namespace control
 {
-
-static double INVALID_DOUBLE = std::numeric_limits<double>::quiet_NaN();
-
-inline bool is_set(double v) { return !std::isnan(v); }
 
 struct ControllerInput
 {

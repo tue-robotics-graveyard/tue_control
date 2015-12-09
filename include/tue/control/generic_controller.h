@@ -17,30 +17,30 @@ namespace tue
 namespace control
 {
 
-using namespace DFILTERS;
-
 /// Filters
-struct Filters {
+struct Filters
+{
     Filters() : first_order_low_pass(0), lead_lag(0), PD(0), PID(0), second_order_low_pass(0), skewed_notch(0), weak_integrator(0) {}
     ~Filters() { clear(); }
 
-    void clear() {
-        if (first_order_low_pass) delete first_order_low_pass;
-        if (lead_lag) delete lead_lag;
-        if (PD) delete PD;
-        if (PID) delete PID;
-        if (second_order_low_pass) delete second_order_low_pass;
-        if (skewed_notch) delete skewed_notch;
-        if (weak_integrator) delete weak_integrator;
+    void clear()
+    {
+        delete first_order_low_pass;
+        delete lead_lag;
+        delete PD;
+        delete PID;
+        delete second_order_low_pass;
+        delete skewed_notch;
+        delete weak_integrator;
     }
 
-    DFirstOrderLowpass* first_order_low_pass;
-    DLeadLag* lead_lag;
-    DPD* PD;
-    DPID* PID;
-    DSecondOrderLowpass* second_order_low_pass;
-    DSkewedNotch* skewed_notch;
-    DWeakIntegrator* weak_integrator;
+    DFILTERS::DFirstOrderLowpass* first_order_low_pass;
+    DFILTERS::DLeadLag* lead_lag;
+    DFILTERS::DPD* PD;
+    DFILTERS::DPID* PID;
+    DFILTERS::DSecondOrderLowpass* second_order_low_pass;
+    DFILTERS::DSkewedNotch* skewed_notch;
+    DFILTERS::DWeakIntegrator* weak_integrator;
 };
 
 class GenericController : public Controller
@@ -66,7 +66,7 @@ public:
     @param config The configuration of the controller
     @param sample_time The sample time of the controller
     */
-    void configure(tue::Configuration &config, double sample_time);
+    void configure(tue::Configuration &config, double dt);
 
     /// Controller update
     /**
@@ -75,7 +75,7 @@ public:
     @param measurement measurement provided by the sensor
     @param reference provided by the user
     */
-    void update(const ControllerInput& input);
+    void update(const ControllerInput& input, ControllerOutput& output);
 
 protected:
 

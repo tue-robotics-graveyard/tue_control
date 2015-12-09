@@ -16,16 +16,18 @@ SetpointController::~SetpointController()
 
 }
 
-void SetpointController::configure(tue::Configuration& config, double sample_time)
+void SetpointController::configure(tue::Configuration& config, double dt)
 {
 }
 
-void SetpointController::update(const ControllerInput& input)
+void SetpointController::update(const ControllerInput& input, ControllerOutput& output)
 {
     if (!is_set(input.pos_reference))
         return;
 
-    output_ = input.pos_reference;
+    output.error = input.pos_reference - input.measurement;
+    output.value = input.pos_reference;
+
     return;
 }
 

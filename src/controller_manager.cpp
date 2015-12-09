@@ -69,7 +69,7 @@ void ControllerManager::configure(tue::Configuration& config)
 
         if (config.readGroup("homing"))
         {
-            data.state = UNINITIALIZED;
+            data.status = UNINITIALIZED;
             config.value("velocity", data.homing_max_vel);
             config.value("acceleration", data.homing_max_acc);
             data.homing_max_acc = std::abs(data.homing_max_acc);
@@ -100,7 +100,7 @@ void ControllerManager::configure(tue::Configuration& config)
         }
         else
         {
-            data.state = READY;
+            data.status = READY;
         }
     }
 
@@ -137,7 +137,7 @@ void ControllerManager::update()
     for(std::vector<ControllerData>::iterator it = controllers_.begin(); it != controllers_.end(); ++it)
     {
         ControllerData& c = *it;
-        c.output = 0;
+        c.output.value = 0;
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Check if measurement is set
@@ -155,7 +155,7 @@ void ControllerManager::update()
         {
             c.measurement_offset = c.zero_measurement - c.input.measurement;
             c.zero_measurement_set = false;
-            c.state = READY;
+            c.status = READY;
         }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -166,7 +166,7 @@ void ControllerManager::update()
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Do not continue if in error or uninitialized (then controller outputs 0)
 
-        if (c.state == ERROR || c.state == UNINITIALIZED)
+        if (c.status == ERROR || c.status == UNINITIALIZED)
         {
             // Invalidate measurement such that we can check if the user sets it in the next cycle
             c.input.measurement = INVALID_DOUBLE;
@@ -176,7 +176,7 @@ void ControllerManager::update()
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Homing
 
-        if (c.state == HOMING)
+        if (c.status == HOMING)
         {
             // - - - - - - - - - - - - - - - - - - - - - - - - -
             // Check if all preconditions are met
@@ -186,7 +186,7 @@ void ControllerManager::update()
                 it != c.precondition_homed_joint_idx.end(); ++it)
             {
                 ControllerData& other = controllers_[*it];
-                if (other.state != READY)
+                if (other.status != READY)
                 {
                     conditions_met = false;
                     break;
@@ -236,8 +236,26 @@ void ControllerManager::update()
         // Update controller
 
         c.input.measurement = c.corrected_measurement;
-        c.controller->update(c.input);
-        c.output = c.controller->getOutput();
+
+        // Reset output
+        c.output = ControllerOutput();
+
+        c.controller->update(c.input, c.output);
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Check output
+
+        if (!is_set(c.output.value))
+        {
+            std::cout << "Controller '" + c.name << "' did not properly provide output" << std::endl;
+            c.output.value = 0;
+        }
+
+        if (!is_set(c.output.error))
+        {
+            std::cout << "Controller '" + c.name << "' did not properly provide error" << std::endl;
+            c.output.value = 0;
+        }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -3,6 +3,7 @@
 
 #include <tue/config/configuration.h>
 
+#include "tue/control/controller.h"
 #include "tue/control/controller_input.h"
 
 namespace tue
@@ -12,8 +13,6 @@ namespace control
 {
 
 // ----------------------------------------------------------------------------------------------------
-
-class Controller;
 
 namespace
 {
@@ -26,7 +25,7 @@ Controller* _createController() { return new T; }
 
 // ----------------------------------------------------------------------------------------------------
 
-enum ControllerState
+enum ControllerStatus
 {
     ERROR,
     UNINITIALIZED,
@@ -38,18 +37,33 @@ enum ControllerState
 
 struct ControllerData
 {
-    ControllerData() : state(UNINITIALIZED), measurement_offset(0), zero_measurement_set(false) {}
+    ControllerData() : status(UNINITIALIZED), measurement_offset(0), zero_measurement_set(false) {}
+
+    // - - - - - - - - - - - - - - - - - - - - - - - -
 
     std::string name;
     Controller* controller;
-    ControllerState state;
+    ControllerStatus status;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - -
+    // Input
+
     ControllerInput input;
-    double output;
     double corrected_measurement;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - -
+    // Output
+
+    ControllerOutput output;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - -
+    // Measurement correction
 
     double measurement_offset;
 
+    // - - - - - - - - - - - - - - - - - - - - - - - -
     // Homing
+
     bool homing_pos_initialized;
     double homing_pos;
     double homing_vel;
@@ -87,9 +101,6 @@ public:
     /// Calls the update step for each controller this manager manages.
     void update();
 
-    /// Set the input for the controller with the given index
-    void setInput(unsigned int idx, const ControllerInput& input) { controllers_[idx].input = input; }
-
     /// Set the measurement for the controller with the given index
     void setMeasurement(unsigned int idx, double m) { controllers_[idx].input.measurement = m; }
 
@@ -103,12 +114,14 @@ public:
     }
 
     /// Get the output of the controller with the given index
-    double getOutput(unsigned int idx) const { return controllers_[idx].output; }
+    double getOutput(unsigned int idx) const { return controllers_[idx].output.value; }
 
     /// Get the state of the controller with the given index
-    ControllerState getState(unsigned int idx) const { return controllers_[idx].state; }
+    ControllerStatus getStatus(unsigned int idx) const { return controllers_[idx].status; }
 
     double getMeasurement(unsigned int idx) { return controllers_[idx].corrected_measurement; }
+
+    double getError(unsigned int idx) { return controllers_[idx].output.error; }
 
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -116,14 +129,14 @@ public:
 
     void startHoming(unsigned int idx)
     {
-        controllers_[idx].state = HOMING;
+        controllers_[idx].status = HOMING;
         controllers_[idx].homing_pos_initialized = false;
         controllers_[idx].zero_measurement_set = false;
     }
 
     void stopHoming(unsigned int idx)
     {
-        controllers_[idx].state = UNINITIALIZED;
+        controllers_[idx].status = UNINITIALIZED;
     }
 
     void setZeroMeasurement(unsigned int idx, double v)
@@ -134,7 +147,7 @@ public:
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    void setError(unsigned int idx) { controllers_[idx].state = ERROR; }
+    void setError(unsigned int idx) { controllers_[idx].status = ERROR; }
 
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
