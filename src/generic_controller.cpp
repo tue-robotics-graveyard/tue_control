@@ -6,7 +6,8 @@ namespace tue
 namespace control
 {
 
-GenericController::GenericController() : gain_(0), filters_(Filters())
+GenericController::GenericController() : gain_(0), filters_(Filters()),
+    ffw_gravity_(0), ffw_static_(0), ffw_dynamic_(0), ffw_acceleration_(0), ffw_direction_(0)
 {
 
 }
@@ -90,6 +91,19 @@ void GenericController::configure(tue::Configuration& config, double dt)
         // end filters
         config.endGroup();
     }
+
+    if (config.readGroup("feedforward"))
+    {
+        config.value("gravity", ffw_gravity_);
+        config.value("static", ffw_static_);
+        config.value("dynamic", ffw_dynamic_);
+        config.value("acceleration", ffw_acceleration_);
+
+        if (!config.value("direction", ffw_direction_, tue::OPTIONAL))
+            ffw_direction_ = 1;
+
+        config.endGroup(); // end feedforward
+    }
 }
 
 void GenericController::update(const ControllerInput& input, ControllerOutput& output)
@@ -97,14 +111,17 @@ void GenericController::update(const ControllerInput& input, ControllerOutput& o
     if (!is_set(input.pos_reference) || !is_set(input.measurement))
         return;
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     //! 1) Calculate the error
 
     double error = input.pos_reference - input.measurement;
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     //! 2) Apply gain
 
     double out = gain_ * error;
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     //! 3) Check what filters are configured and apply these
 
     // Apply weak_integrator
@@ -135,10 +152,24 @@ void GenericController::update(const ControllerInput& input, ControllerOutput& o
         out = filters_.second_order_low_pass->getOutput();
     }
 
-//    //! 4) Apply feed forward
-//    output_ += feed_forward;
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    //! 4) Apply feed forward
 
+    double ff = ffw_gravity_;
+    if (is_set(input.vel_reference))
+    {
+        double vel_sign = input.vel_reference < 0 ? -1 : (input.vel_reference > 0 ? 1 : 0);
+        ff += ffw_static_ * vel_sign + ffw_dynamic_ * input.vel_reference;
+    }
+
+    if (is_set(input.acc_reference))
+        ff += ffw_acceleration_ * input.acc_reference;
+
+    out += ffw_direction_ * ff;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Set output
+
     output.value = out;
     output.error = error;
 

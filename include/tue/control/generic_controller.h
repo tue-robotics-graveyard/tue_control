@@ -82,6 +82,13 @@ protected:
     double gain_;
     Filters filters_;
 
+    // Feed forward
+    double ffw_gravity_;
+    double ffw_static_;
+    double ffw_dynamic_;
+    double ffw_acceleration_;
+    double ffw_direction_;
+
 };
 
 }

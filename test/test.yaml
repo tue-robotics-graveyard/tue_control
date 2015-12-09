@@ -12,6 +12,15 @@ controllers:
     second_order_low_pass:
       fp: 20
       dp: 0.7
+  feedforward:
+    gravity: 0.07
+    static: 0.05
+    dynamic: 0.4
+    acceleration: 0.3
+    direction: -1 
+  safety:
+    max_error: 0.02         # TODO
+    output_saturation: 50   # TODO
   homing:
     velocity: 0.01
     acceleration: 0.02
