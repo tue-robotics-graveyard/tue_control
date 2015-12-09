@@ -101,6 +101,10 @@ public:
     /// Calls the update step for each controller this manager manages.
     void update();
 
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Controller setters
+
     /// Set the measurement for the controller with the given index
     void setMeasurement(unsigned int idx, double m) { controllers_[idx].input.measurement = m; }
 
@@ -113,15 +117,23 @@ public:
         c.input.acc_reference = acc;
     }
 
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Controller getters
+
+    unsigned int getNumControllers(unsigned int idx) const { return controllers_.size(); }
+
     /// Get the output of the controller with the given index
     double getOutput(unsigned int idx) const { return controllers_[idx].output.value; }
 
     /// Get the state of the controller with the given index
     ControllerStatus getStatus(unsigned int idx) const { return controllers_[idx].status; }
 
-    double getMeasurement(unsigned int idx) { return controllers_[idx].corrected_measurement; }
+    double getMeasurement(unsigned int idx) const { return controllers_[idx].corrected_measurement; }
 
-    double getError(unsigned int idx) { return controllers_[idx].output.error; }
+    double getError(unsigned int idx) const { return controllers_[idx].output.error; }
+
+    const std::string& getName(unsigned int idx) const { return controllers_[idx].name; }
 
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
