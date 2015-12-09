@@ -140,18 +140,11 @@ void ControllerManager::update()
         c.output = 0;
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Check if measurement is set
 
         if (!is_set(c.input.measurement))
         {
             std::cout << "Measurement not set for controller '" << c.name << "'" << std::endl;
-            continue;
-        }
-
-        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        // Handle error state
-
-        if (c.state == ERROR)
-        {
             continue;
         }
 
@@ -163,6 +156,21 @@ void ControllerManager::update()
             c.measurement_offset = c.zero_measurement - c.input.measurement;
             c.zero_measurement_set = false;
             c.state = READY;
+        }
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Apply measurement correction
+
+        c.corrected_measurement = c.input.measurement + c.measurement_offset;
+
+        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        // Do not continue if in error or uninitialized (then controller outputs 0)
+
+        if (c.state == ERROR || c.state == UNINITIALIZED)
+        {
+            // Invalidate measurement such that we can check if the user sets it in the next cycle
+            c.input.measurement = INVALID_DOUBLE;
+            continue;
         }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -225,14 +233,9 @@ void ControllerManager::update()
         }
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        // Apply measurement correction
-
-        c.input.measurement += c.measurement_offset;
-        c.corrected_measurement = c.input.measurement;
-
-        // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         // Update controller
 
+        c.input.measurement = c.corrected_measurement;
         c.controller->update(c.input);
         c.output = c.controller->getOutput();
 

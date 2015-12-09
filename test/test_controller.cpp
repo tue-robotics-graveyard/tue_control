@@ -62,7 +62,11 @@ int main(int argc, char **argv)
     torso.setMass(-1);
     torso.setPosition(100);
 
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    std::cout << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
+    std::cout << "                          HOMING                             " << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
 
     int t = 0;
 
@@ -88,9 +92,11 @@ int main(int argc, char **argv)
 
     manager.stopHoming(idx);
 
+    std::cout << std::endl;
     std::cout << "-------------------------------------------------------------" << std::endl;
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    std::cout << "                        SET REFERENCE                        " << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
 
     manager.setReference(idx, 0.1);
 
@@ -108,6 +114,19 @@ int main(int argc, char **argv)
 
         ++t;
     }
+
+    std::cout << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
+    std::cout << "                            ERROR                            " << std::endl;
+    std::cout << "-------------------------------------------------------------" << std::endl;
+    std::cout << std::endl;
+
+    manager.setError(idx);
+
+    manager.setMeasurement(idx, torso.position());
+    manager.update();
+
+    std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
 
     return 0;
 }
