@@ -117,7 +117,7 @@ void ControllerManager::configure(tue::Configuration& config)
         }
     }
 
-    config.endArrayItem();
+    config.endArray();
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
