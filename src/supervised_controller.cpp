@@ -10,7 +10,7 @@ namespace control
 // ----------------------------------------------------------------------------------------------------
 
 SupervisedController::SupervisedController() : status_(UNINITIALIZED), event_(NONE), measurement_offset(0),
-    error_(INVALID_DOUBLE), output_(INVALID_DOUBLE)
+    error_(INVALID_DOUBLE), output_(INVALID_DOUBLE), output_saturation_(INVALID_DOUBLE), max_error_(INVALID_DOUBLE)
 {
     input_.measurement = INVALID_DOUBLE;
 }
@@ -133,6 +133,22 @@ void SupervisedController::update(double measurement)
 
     error_ = output.error;
     output_ = output.value;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Check safety
+
+    if (is_set(error_) && std::abs(error_) > max_error_)
+    {
+        output_ = 0;
+        setError("Max error reached");
+    }
+    else if (is_set(output_saturation_))   // Output saturation
+    {
+        if (output_ < -output_saturation_)
+            output_ = -output_saturation_;
+        else if (output_ > output_saturation_)
+            output_ = output_saturation_;
+    }
 
     event_ = NONE;
 }
