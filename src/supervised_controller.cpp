@@ -187,6 +187,13 @@ void SupervisedController::updateHoming(double measurement, ControllerOutput& ou
 
 // ----------------------------------------------------------------------------------------------------
 
+const std::string& SupervisedController::name() const
+{
+    return controller_->name();
+}
+
+// ----------------------------------------------------------------------------------------------------
+
 } // end namespace tue
 
 } // end namespace control

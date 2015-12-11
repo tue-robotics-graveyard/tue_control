@@ -30,8 +30,6 @@ set(SOURCE_FILES
 
   src/setpoint_controller.cpp    
   src/generic_controller.cpp
-
-  src/controller_manager.cpp
 )
 
 set(HEADER_FILES
@@ -44,8 +42,6 @@ set(HEADER_FILES
 
   include/tue/control/setpoint_controller.h  
   include/tue/control/generic_controller.h
-
-  include/tue/control/controller_manager.h
 )
 
 add_library(tue_control ${SOURCE_FILES} ${HEADER_FILES})

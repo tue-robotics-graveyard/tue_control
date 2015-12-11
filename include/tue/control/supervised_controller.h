@@ -112,6 +112,7 @@ public:
 
     bool accepts_references() const { return status_ == ACTIVE; }
 
+    const std::string& name() const;
 
 private:
 
