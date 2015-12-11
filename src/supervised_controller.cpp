@@ -10,8 +10,9 @@ namespace control
 // ----------------------------------------------------------------------------------------------------
 
 SupervisedController::SupervisedController() : status_(UNINITIALIZED), event_(NONE), measurement_offset(0),
-    error_(INVALID_DOUBLE), measurement_(INVALID_DOUBLE), output_(INVALID_DOUBLE)
+    error_(INVALID_DOUBLE), output_(INVALID_DOUBLE)
 {
+    input_.measurement = INVALID_DOUBLE;
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -56,7 +57,7 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
 
 // ----------------------------------------------------------------------------------------------------
 
-void SupervisedController::update(const ControllerInput& input, ControllerOutput& output)
+void SupervisedController::update(double measurement)
 {
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -65,7 +66,7 @@ void SupervisedController::update(const ControllerInput& input, ControllerOutput
 
     case START_HOMING:
     {
-        homing_pos = input.measurement;
+        homing_pos = measurement;
         homing_vel = 0;
         status_ = HOMING;
         break;
@@ -75,7 +76,7 @@ void SupervisedController::update(const ControllerInput& input, ControllerOutput
     {
         if (status_ == HOMING)
         {
-            measurement_offset = zero_measurement - input.measurement;
+            measurement_offset = zero_measurement - measurement;
             status_ = ACTIVE;
         }
         break;
@@ -106,19 +107,21 @@ void SupervisedController::update(const ControllerInput& input, ControllerOutput
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    measurement_ = input.measurement + measurement_offset;
+    input_.measurement = measurement + measurement_offset;
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    ControllerOutput output;
 
     switch (status_)
     {
 
     case HOMING:
-        updateHoming(output);
+        updateHoming(measurement, output);
         break;
 
     case ACTIVE:
-        controller_->update(input, output);
+        controller_->update(input_, output);
         break;
 
     default:
@@ -135,18 +138,19 @@ void SupervisedController::update(const ControllerInput& input, ControllerOutput
 }
 // ----------------------------------------------------------------------------------------------------
 
-void SupervisedController::updateHoming(ControllerOutput& output)
+void SupervisedController::updateHoming(double measurement, ControllerOutput& output)
 {
     ControllerInput homing_input;
+    homing_input.measurement = measurement;
 
     // Determine homing direction based on max_vel sign
-    double dir = homing_max_vel < 0 ? -1 : 1;
+    double dir = homing_max_vel_ < 0 ? -1 : 1;
 
     // Determine absolute max velocity
-    double abs_vel_max = std::abs(homing_max_vel);
+    double abs_vel_max = std::abs(homing_max_vel_);
 
     // Set homing acceleration based on direction
-    homing_input.acc_reference = dir * homing_max_acc;
+    homing_input.acc_reference = dir * homing_max_acc_;
 
     // Increase (or decrease if acc < 0) velocity based on acceleration
     homing_vel += dt_ * homing_input.acc_reference;

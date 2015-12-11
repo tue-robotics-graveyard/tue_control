@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <tue/config/configuration.h>
+#include <tue/control/controller_input.h>
 
 namespace tue
 {
@@ -18,11 +19,11 @@ struct ControllerOutput;
 
 enum ControllerStatus
 {
-    ERROR,
-    UNINITIALIZED,
-    HOMING,
-    INACTIVE,
-    ACTIVE
+    UNINITIALIZED = 0,
+    HOMING = 1,
+    ACTIVE = 2,
+    INACTIVE = 3,
+    ERROR = 4
 };
 
 // ----------------------------------------------------------------------------------------------------
@@ -66,13 +67,20 @@ public:
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Update
 
-    void update(const ControllerInput& input, ControllerOutput& output);
+    void update(double measurement);
 
-    void updateHoming(ControllerOutput& output);
+    void updateHoming(double measurement, ControllerOutput& output);
 
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Change state / status
+
+    void setReference(double pos, double vel = 0, double acc = 0)
+    {
+        input_.pos_reference = pos;
+        input_.vel_reference = vel;
+        input_.acc_reference = acc;
+    }
 
     void startHoming() { event_ = START_HOMING; }
 
@@ -90,9 +98,15 @@ public:
 
     ControllerStatus status() const { return status_; }
 
+    const char* status_string() const
+    {
+        static const char* STATUS_STRING[] = { "UNINITIALIZED", "HOMING", "ACTIVE", "INACTIVE", "ERROR" };
+        return STATUS_STRING[status_];
+    }
+
     double error() const { return error_; }
 
-    double measurement() const { return measurement_; }
+    double measurement() const { return input_.measurement; }
 
     double output() const { return output_; }
 
@@ -111,9 +125,10 @@ private:
 
     std::string error_msg_;
 
-    double error_;
+    ControllerInput input_;
 
-    double measurement_;
+
+    double error_;
 
     double output_;
 
@@ -133,8 +148,6 @@ private:
 
     double homing_pos;
     double homing_vel;
-    double homing_max_vel;
-    double homing_max_acc;
     double zero_measurement;
 
 };

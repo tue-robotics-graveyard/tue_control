@@ -1,4 +1,10 @@
-#include <tue/control/controller_manager.h>
+#include <tue/control/controller_factory.h>
+#include <tue/control/supervised_controller.h>
+
+#include <tue/control/controller_input.h>
+
+#include <tue/control/generic_controller.h>
+#include <tue/control/setpoint_controller.h>
 
 // ----------------------------------------------------------------------------------------------------
 
@@ -46,8 +52,19 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    tue::control::ControllerManager manager;
-    manager.configure(config);
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    tue::control::ControllerFactory factory;
+    factory.registerControllerType<tue::control::GenericController>("generic");
+    factory.registerControllerType<tue::control::SetpointController>("setpoint");
+
+    typedef std::shared_ptr<tue::control::SupervisedController> SupvControllerPtr;
+
+    double dt;
+    config.value("dt", dt);
+
+    SupvControllerPtr c = factory.createController(config, dt);
+
     if (config.hasError())
     {
         std::cerr << config.error() << std::endl;
@@ -55,8 +72,6 @@ int main(int argc, char **argv)
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    unsigned int idx = manager.getControllerIdx("torso");
 
     Plant torso;
     torso.setMass(-1);
@@ -70,27 +85,24 @@ int main(int argc, char **argv)
 
     int t = 0;
 
-    manager.startHoming(idx);
+    c->startHoming();
 
     while(true)
     {
         if (torso.position() >= 100.2)
         {
-            manager.setZeroMeasurement(idx, 0.4);
+            c->stopHoming(0.4);
             break;
         }
 
-        manager.setMeasurement(idx, torso.position());
-        manager.update();
-        torso.update(manager.getOutput(idx), manager.dt());
+        c->update(torso.position());
+        torso.update(c->output(), dt);
 
         if (t % 100 == 0)
-            std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
+            std::cout << "[" << dt * t << "] controller output = " << c->output() << ", measurement = " << c->measurement() << std::endl;
 
         ++t;
     }
-
-    manager.stopHoming(idx);
 
     std::cout << std::endl;
     std::cout << "-------------------------------------------------------------" << std::endl;
@@ -98,16 +110,16 @@ int main(int argc, char **argv)
     std::cout << "-------------------------------------------------------------" << std::endl;
     std::cout << std::endl;
 
-    manager.setReference(idx, 0.1);
+    c->setReference(0.1);
 
     while(true)
     {
-        manager.setMeasurement(idx, torso.position());
-        manager.update();
-        torso.update(manager.getOutput(idx), manager.dt());
+        c->update(torso.position());
+        torso.update(c->output(), dt);
+
 
         if (t % 100 == 0)
-            std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
+            std::cout << "[" << dt * t << "] controller output = " << c->output() << ", measurement = " << c->measurement() << std::endl;
 
         if (t > 30000)
             break;
@@ -121,12 +133,11 @@ int main(int argc, char **argv)
     std::cout << "-------------------------------------------------------------" << std::endl;
     std::cout << std::endl;
 
-    manager.setError(idx);
+    c->setError("Just a test");
 
-    manager.setMeasurement(idx, torso.position());
-    manager.update();
+    c->update(torso.position());
 
-    std::cout << "[" << manager.dt() * t << "] controller output = " << manager.getOutput(idx) << ", measurement = " << manager.getMeasurement(idx) << std::endl;
+    std::cout << "[" << dt * t << "] controller output = " << c->output() << ", measurement = " << c->measurement() << std::endl;
 
     return 0;
 }

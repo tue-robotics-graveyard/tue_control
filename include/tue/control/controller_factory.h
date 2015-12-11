@@ -21,7 +21,7 @@ namespace
 
 // Templated helper function for creating controllers of a specific type
 template<typename T>
-Controller* _createController() { return new T; }
+std::shared_ptr<Controller> _createController() { return std::make_shared<T>(); }
 
 }
 
@@ -36,7 +36,7 @@ public:
 
     ~ControllerFactory();
 
-    std::shared_ptr<SupervisedController> createController(tue::Configuration& config) const;
+    std::shared_ptr<SupervisedController> createController(tue::Configuration& config, double dt) const;
 
     /// Register a new type of controller. The controller must derive from 'Controller'. Parameter
     /// 'name' determines the name of the controller type.
@@ -49,7 +49,7 @@ public:
 private:
 
     /// Controller creator function pointer type definition
-    typedef Controller* (*t_controller_creator)();
+    typedef std::shared_ptr<Controller> (*t_controller_creator)();
 
     /// Mapping from controller types to function pointers that create a controller of this type
     std::map<std::string, t_controller_creator> controller_types_;

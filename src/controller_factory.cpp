@@ -1,6 +1,7 @@
 #include "tue/control/controller_factory.h"
 
 #include "tue/control/controller.h"
+#include "tue/control/supervised_controller.h"
 
 namespace tue
 {
@@ -21,87 +22,45 @@ ControllerFactory::~ControllerFactory()
 
 // ----------------------------------------------------------------------------------------------------
 
-std::shared_ptr<SupervisedController> ControllerFactory::createController(tue::Configuration& config) const
+std::shared_ptr<SupervisedController> ControllerFactory::createController(tue::Configuration& config, double dt) const
 {
-    std::shared_ptr<SupervisedController> controller;
+    std::shared_ptr<SupervisedController> supervised_controller;
 
-//    std::string name, type;
-//    if (!config.value("name", name) | !config.value("type", type))
-//        continue;
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Get controller name and type
 
-//    config.setShortErrorContext(name);
+    std::string name, type;
+    if (!config.value("name", name) | !config.value("type", type))
+        return supervised_controller;
 
-//    if (name_to_controller_idx_.find(name) != name_to_controller_idx_.end())
-//    {
-//        config.addError("Controller with name '" + name + "' already exists.");
-//        continue;
-//    }
+    config.setShortErrorContext(name);
 
-//    Controller* c = createController(type);
-//    if (!c)
-//    {
-//        config.addError("Unknown controller type: '" + type + "'");
-//        continue;
-//    }
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Create controller core from given type
 
-//    c->configure(config, dt_);
+    std::map<std::string, t_controller_creator>::const_iterator it = controller_types_.find(type);
+    if (it == controller_types_.end())
+    {
+        config.addError("Unknown controller type: '" + type + "'");
+        return supervised_controller;
+    }
 
-//    name_to_controller_idx_[name] = controllers_.size();
-//    controllers_.push_back(ControllerData());
-//    ControllerData& data = controllers_.back();
-//    data.controller = c;
-//    data.name = name;
+    std::shared_ptr<Controller> c = it->second();
 
-//    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-//    // Configure safety
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Configure controller core
 
-//    if (config.readGroup("safety"))
-//    {
-//        config.value("output_saturation", data.output_saturation, tue::OPTIONAL);
-//        config.value("max_error", data.max_error, tue::OPTIONAL);
-//        config.endGroup(); // End safety
-//    }
+    c->configure(config, dt);
+    c->setName(name);
 
-//    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-//    // Configure homing
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Wrap controller in supervised controller, and configure it
 
-//    if (config.readGroup("homing"))
-//    {
-//        data.status = UNINITIALIZED;
-//        config.value("velocity", data.homing_max_vel);
-//        config.value("acceleration", data.homing_max_acc);
-//        data.homing_max_acc = std::abs(data.homing_max_acc);
+    supervised_controller.reset(new SupervisedController);
+    supervised_controller->setController(c);
+    supervised_controller->configure(config, dt);
 
-//        // Read preconditions config
-//        if (config.readArray("preconditions"))
-//        {
-//            while(config.nextArrayItem())
-//            {
-//                std::string homed_joint;
-//                if (config.value("homed", homed_joint, tue::OPTIONAL))
-//                {
-//                    data.precondition_homed_joints.push_back(homed_joint);
-//                }
-//                else
-//                {
-//                    std::stringstream s;
-//                    s << config;
-//                    config.addError("Unknown precondition: " + s.str());
-//                }
-
-//            }
-
-//            config.endArray();
-//        }
-
-//        config.endGroup();
-//    }
-//    else
-//    {
-//        data.status = READY;
-//    }
-
-    return controller;
+    return supervised_controller;
 }
 
 } // end namespace tue

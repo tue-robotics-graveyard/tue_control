@@ -45,6 +45,14 @@ public:
     */
     virtual void update(const ControllerInput& input, ControllerOutput& output) = 0;
 
+    void setName(const std::string& name) { name_ = name; }
+
+    const std::string& name() const { return name_; }
+
+private:
+
+    std::string name_;
+
 };
 
 }
