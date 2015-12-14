@@ -40,16 +40,16 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
 
     if (config.readGroup("homing"))
     {
-        status_ = UNINITIALIZED;
         config.value("velocity", homing_max_vel_);
         config.value("acceleration", homing_max_acc_);
         homing_max_acc_ = std::abs(homing_max_acc_);
         config.endGroup();
+
+        homed_ = false;
     }
     else
     {
-        // Homing is not necessary
-        status_ = ACTIVE;
+        homed_ = true;
     }
 
     dt_ = dt;
@@ -59,6 +59,14 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
 
 void SupervisedController::update(double measurement)
 {
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if (is_set(measurement) && status_ == UNINITIALIZED && homed_)
+    {
+        // First time we receive a measurement while being uninitialized
+        event_ = SET_ACTIVE;
+    }
+
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     switch (event_)
@@ -78,27 +86,28 @@ void SupervisedController::update(double measurement)
         {
             measurement_offset = zero_measurement - measurement;
             status_ = ACTIVE;
+            homed_ = true;
         }
         break;
     }
 
     case SET_ERROR:
     {
-        if (status_ != UNINITIALIZED)
+        if (status_ != UNINITIALIZED || homed_)
             status_ = ERROR;
         break;
     }
 
     case SET_ACTIVE:
     {
-        if (status_ != UNINITIALIZED)
+        if (status_ != UNINITIALIZED || homed_)
             status_ = ACTIVE;
         break;
     }
 
     case SET_INACTIVE:
     {
-        if (status_ != UNINITIALIZED)
+        if (status_ != UNINITIALIZED || homed_)
             status_ = INACTIVE;
         break;
     }
@@ -112,20 +121,31 @@ void SupervisedController::update(double measurement)
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     ControllerOutput output;
+    output.value = 0;
+    output.error = INVALID_DOUBLE;
 
     switch (status_)
     {
 
     case HOMING:
-        updateHoming(measurement, output);
+    {
+        if (!is_set(measurement))
+            setError("While homing: no or bad measurement received");
+        else
+            updateHoming(measurement, output);
         break;
+    }
 
     case ACTIVE:
-        controller_->update(input_, output);
+    {
+        if (!is_set(measurement))
+            setError("While active: no or bad measurement received");
+        else
+            controller_->update(input_, output);
         break;
+    }
 
     default:
-        output.value = 0;
         break;
     }
 
@@ -137,9 +157,12 @@ void SupervisedController::update(double measurement)
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Check safety
 
-    if (is_set(error_) && std::abs(error_) > max_error_)
+    if (!is_set(output_))
     {
-        output_ = 0;
+        setError("Invalid output");
+    }
+    else if (is_set(error_) && std::abs(error_) > max_error_)
+    {
         setError("Max error reached");
     }
     else if (is_set(output_saturation_))   // Output saturation
@@ -148,6 +171,14 @@ void SupervisedController::update(double measurement)
             output_ = -output_saturation_;
         else if (output_ > output_saturation_)
             output_ = output_saturation_;
+    }
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if (event_ == SET_ERROR)
+    {
+        status_ = ERROR;
+        output_ = 0;
     }
 
     event_ = NONE;

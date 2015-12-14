@@ -114,6 +114,8 @@ public:
 
     const std::string& name() const;
 
+    const std::string& error_message() const { return error_msg_; }
+
 private:
 
     double dt_;
@@ -127,6 +129,8 @@ private:
     std::string error_msg_;
 
     ControllerInput input_;
+
+    bool homed_;
 
 
     double error_;
