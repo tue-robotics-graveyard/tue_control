@@ -16,15 +16,19 @@ catkin_package(
 #                                              BUILD
 # ------------------------------------------------------------------------------------------------
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 include_directories(
     include
     ${catkin_INCLUDE_DIRS}
 )
 
 set(SOURCE_FILES
-  src/setpoint_controller.cpp
   src/controller.cpp
-  src/controller_manager.cpp
+  src/controller_factory.cpp
+  src/supervised_controller.cpp
+
+  src/setpoint_controller.cpp    
   src/generic_controller.cpp
 )
 
@@ -33,8 +37,10 @@ set(HEADER_FILES
   include/tue/control/controller.h
   include/tue/control/controller_input.h
   include/tue/control/controller_output.h
-  include/tue/control/setpoint_controller.h
-  include/tue/control/controller_manager.h
+  include/tue/control/controller_factory.h
+  include/tue/control/supervised_controller.h
+
+  include/tue/control/setpoint_controller.h  
   include/tue/control/generic_controller.h
 )
 
