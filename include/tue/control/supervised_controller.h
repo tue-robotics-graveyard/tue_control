@@ -116,6 +116,12 @@ public:
 
     const std::string& error_message() const { return error_msg_; }
 
+    double reference_position() const { return input_.pos_reference; }
+
+    double reference_velocity() const { return input_.vel_reference; }
+
+    double reference_acceleration() const { return input_.acc_reference; }
+
 private:
 
     double dt_;
