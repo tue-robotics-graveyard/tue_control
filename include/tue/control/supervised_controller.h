@@ -122,6 +122,8 @@ public:
 
     double reference_acceleration() const { return input_.acc_reference; }
 
+    bool is_homed() const { return homed_; }
+
 private:
 
     double dt_;
