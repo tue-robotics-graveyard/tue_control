@@ -86,6 +86,13 @@ void SupervisedController::update(double measurement)
         {
             measurement_offset = zero_measurement - measurement;
             status_ = ACTIVE;
+            
+			input_.pos_reference = measurement;
+			input_.vel_reference = 0;
+			input_.acc_reference = 0;
+			
+			// TODO: reset controller (integrator, etc)	
+            
             homed_ = true;
         }
         break;
@@ -101,7 +108,15 @@ void SupervisedController::update(double measurement)
     case SET_ACTIVE:
     {
         if (status_ != UNINITIALIZED || homed_)
+        {
+			input_.pos_reference = measurement;
+			input_.vel_reference = 0;
+			input_.acc_reference = 0;
+			
+			// TODO: reset controller (integrator, etc)			
+			
             status_ = ACTIVE;
+		}
         break;
     }
 
