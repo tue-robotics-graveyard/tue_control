@@ -9,7 +9,7 @@ namespace control
 
 // ----------------------------------------------------------------------------------------------------
 
-SupervisedController::SupervisedController() : status_(UNINITIALIZED), event_(NONE), measurement_offset(0),
+SupervisedController::SupervisedController() : event_(NONE), measurement_offset(0),
     error_(INVALID_DOUBLE), output_(INVALID_DOUBLE), output_saturation_(INVALID_DOUBLE), max_error_(INVALID_DOUBLE)
 {
     input_.measurement = INVALID_DOUBLE;
@@ -52,108 +52,98 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
         homed_ = true;
     }
 
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // State Machine
+
+    fsm_.setInitialState(UNINITIALIZED);
+    fsm_.addTransition(UNINITIALIZED, RECEIVED_MEASUREMENT, IDLE);
+
+    fsm_.addTransition(IDLE, START_HOMING, HOMING);
+//    fsm_.addTransition(INACTIVE, SET_ACTIVE, ACTIVE);
+
+    fsm_.addTransition(HOMING, STOP_HOMING, ACTIVE);
+    fsm_.addTransition(HOMING, SET_ERROR, ERROR);
+    fsm_.addTransition(HOMING, SET_INACTIVE, IDLE);
+
+    fsm_.addTransition(ACTIVE, SET_INACTIVE, IDLE);
+    fsm_.addTransition(ACTIVE, SET_ERROR, ERROR);
+
+    fsm_.addTransition(IDLE, SET_ACTIVE, HOMING);
+
+    fsm_.addTransition(ERROR, SET_ACTIVE, ACTIVE);
+
     dt_ = dt;
 }
 
 // ----------------------------------------------------------------------------------------------------
 
-void SupervisedController::update(double measurement)
+void SupervisedController::checkTransitions(double raw_measurement)
+{
+    while(event_ != NONE)
+    {
+        if (!fsm_.step(event_))
+            return;
+
+        if (event_ == STOP_HOMING)
+        {
+            measurement_offset = homed_measurement_ - raw_measurement;
+
+            // TODO: reset controller (integrator, etc)
+            homed_ = true;
+
+            input_.measurement = homed_measurement_;
+        }
+
+        if (fsm_.current_state() == ACTIVE)
+        {
+            // Just reached ACTIVE state
+            input_.pos_reference = input_.measurement;
+            input_.vel_reference = 0;
+            input_.acc_reference = 0;
+        }
+
+        event_ = NONE;
+    }
+}
+
+// ----------------------------------------------------------------------------------------------------
+
+void SupervisedController::update(double raw_measurement)
 {
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    if (is_set(measurement) && status_ == UNINITIALIZED && homed_)
+    if (status() == UNINITIALIZED && is_set(raw_measurement))
     {
         // First time we receive a measurement while being uninitialized
-        event_ = SET_ACTIVE;
+        event_ = RECEIVED_MEASUREMENT;
     }
+
+    input_.measurement = raw_measurement + measurement_offset;
+
+    checkTransitions(raw_measurement);
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    switch (event_)
-    {
-
-    case START_HOMING:
-    {
-        homing_pos = measurement;
-        homing_vel = 0;
-        status_ = HOMING;
-        break;
-    }
-
-    case STOP_HOMING:
-    {
-        if (status_ == HOMING)
-        {
-            measurement_offset = zero_measurement - measurement;
-            status_ = ACTIVE;
-            
-			input_.pos_reference = measurement;
-			input_.vel_reference = 0;
-			input_.acc_reference = 0;
-			
-			// TODO: reset controller (integrator, etc)	
-            
-            homed_ = true;
-        }
-        break;
-    }
-
-    case SET_ERROR:
-    {
-        if (status_ != UNINITIALIZED || homed_)
-            status_ = ERROR;
-        break;
-    }
-
-    case SET_ACTIVE:
-    {
-        if (status_ != UNINITIALIZED || homed_)
-        {
-			input_.pos_reference = measurement;
-			input_.vel_reference = 0;
-			input_.acc_reference = 0;
-			
-			// TODO: reset controller (integrator, etc)			
-			
-            status_ = ACTIVE;
-		}
-        break;
-    }
-
-    case SET_INACTIVE:
-    {
-        if (status_ != UNINITIALIZED || homed_)
-            status_ = INACTIVE;
-        break;
-    }
-
-    }
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    input_.measurement = measurement + measurement_offset;
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // Update controller
 
     ControllerOutput output;
     output.value = 0;
     output.error = INVALID_DOUBLE;
 
-    switch (status_)
+    switch (status())
     {
 
     case HOMING:
     {
-        if (!is_set(measurement))
+        if (!is_set(raw_measurement))
             setError("While homing: no or bad measurement received");
         else
-            updateHoming(measurement, output);
+            updateHoming(raw_measurement, output);
         break;
     }
 
     case ACTIVE:
     {
-        if (!is_set(measurement))
+        if (!is_set(raw_measurement))
             setError("While active: no or bad measurement received");
         else
             controller_->update(input_, output);
@@ -189,15 +179,11 @@ void SupervisedController::update(double measurement)
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // We may have an SET_ERROR event, so re-check transitions
 
-    if (event_ == SET_ERROR)
-    {
-        status_ = ERROR;
-        output_ = 0;
-    }
-
-    event_ = NONE;
+    checkTransitions(raw_measurement);
 }
+
 // ----------------------------------------------------------------------------------------------------
 
 void SupervisedController::updateHoming(double measurement, ControllerOutput& output)

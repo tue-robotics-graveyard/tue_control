@@ -5,6 +5,7 @@
 
 #include <tue/config/configuration.h>
 #include <tue/control/controller_input.h>
+#include <tue/control/fsm.h>
 
 namespace tue
 {
@@ -22,7 +23,7 @@ enum ControllerStatus
     UNINITIALIZED = 0,
     HOMING = 1,
     ACTIVE = 2,
-    INACTIVE = 3,
+    IDLE = 3,
     ERROR = 4
 };
 
@@ -30,12 +31,13 @@ enum ControllerStatus
 
 enum ControllerEvent
 {
-    NONE,
-    START_HOMING,
-    STOP_HOMING,
-    SET_ERROR,
-    SET_ACTIVE,
-    SET_INACTIVE
+    NONE = 0,
+    RECEIVED_MEASUREMENT = 1,
+    START_HOMING = 2,
+    STOP_HOMING = 3,
+    SET_ERROR = 4,
+    SET_ACTIVE = 5,
+    SET_INACTIVE = 6
 };
 
 // ----------------------------------------------------------------------------------------------------
@@ -84,7 +86,7 @@ public:
 
     void startHoming() { event_ = START_HOMING; }
 
-    void stopHoming(double current_pos) { event_ = STOP_HOMING; zero_measurement = current_pos; }
+    void stopHoming(double current_pos) { event_ = STOP_HOMING; homed_measurement_ = current_pos; }
 
     void setError(const std::string& error_msg) { event_ = SET_ERROR; error_msg_ = error_msg; }
 
@@ -96,12 +98,12 @@ public:
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Getters
 
-    ControllerStatus status() const { return status_; }
+    ControllerStatus status() const { return fsm_.current_state(); }
 
     const char* status_string() const
     {
         static const char* STATUS_STRING[] = { "UNINITIALIZED", "HOMING", "ACTIVE", "INACTIVE", "ERROR" };
-        return STATUS_STRING[status_];
+        return STATUS_STRING[status()];
     }
 
     double error() const { return error_; }
@@ -110,7 +112,7 @@ public:
 
     double output() const { return output_; }
 
-    bool accepts_references() const { return status_ == ACTIVE; }
+    bool accepts_references() const { return status() == ACTIVE; }
 
     const std::string& name() const;
 
@@ -128,7 +130,7 @@ private:
 
     double dt_;
 
-    ControllerStatus status_;
+//    ControllerStatus status_;
 
     ControllerEvent event_;
 
@@ -139,6 +141,10 @@ private:
     ControllerInput input_;
 
     bool homed_;
+
+    FSM<ControllerStatus, ControllerEvent> fsm_;
+
+    void checkTransitions(double measurement);
 
 
     double error_;
@@ -161,7 +167,7 @@ private:
 
     double homing_pos;
     double homing_vel;
-    double zero_measurement;
+    double homed_measurement_;
 
 };
 

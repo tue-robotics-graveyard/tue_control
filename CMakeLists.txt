@@ -44,6 +44,7 @@ set(SOURCE_FILES
 
 set(HEADER_FILES
   include/tue/control/generic.h
+  include/tue/control/fsm.h
   include/tue/control/controller.h
   include/tue/control/controller_input.h
   include/tue/control/controller_output.h
