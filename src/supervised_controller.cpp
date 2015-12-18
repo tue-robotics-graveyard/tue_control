@@ -46,31 +46,17 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
         config.endGroup();
 
         homed_ = false;
+        homable_ = true;
     }
     else
     {
         homed_ = true;
+        homable_ = false;
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    // State Machine
 
-    fsm_.setInitialState(UNINITIALIZED);
-    fsm_.addTransition(UNINITIALIZED, RECEIVED_MEASUREMENT, IDLE);
-
-    fsm_.addTransition(IDLE, START_HOMING, HOMING);
-//    fsm_.addTransition(INACTIVE, SET_ACTIVE, ACTIVE);
-
-    fsm_.addTransition(HOMING, STOP_HOMING, ACTIVE);
-    fsm_.addTransition(HOMING, SET_ERROR, ERROR);
-    fsm_.addTransition(HOMING, SET_INACTIVE, IDLE);
-
-    fsm_.addTransition(ACTIVE, SET_INACTIVE, IDLE);
-    fsm_.addTransition(ACTIVE, SET_ERROR, ERROR);
-
-    fsm_.addTransition(IDLE, SET_ACTIVE, HOMING);
-
-    fsm_.addTransition(ERROR, SET_ACTIVE, ACTIVE);
+    status_ = UNINITIALIZED;
 
     dt_ = dt;
 }
@@ -79,46 +65,70 @@ void SupervisedController::configure(tue::Configuration& config, double dt)
 
 void SupervisedController::checkTransitions(double raw_measurement)
 {
-    while(event_ != NONE)
+    ControllerStatus old_status = status_;
+
+    if (event_ == STOP_HOMING && status_ == HOMING)
     {
-        if (!fsm_.step(event_))
-            return;
+        measurement_offset = homed_measurement_ - raw_measurement;
+        input_.measurement = homed_measurement_;
 
-        if (event_ == STOP_HOMING)
-        {
-            measurement_offset = homed_measurement_ - raw_measurement;
+        homed_ = true;
 
-            // TODO: reset controller (integrator, etc)
-            homed_ = true;
-
-            input_.measurement = homed_measurement_;
-        }
-
-        if (fsm_.current_state() == ACTIVE)
-        {
-            // Just reached ACTIVE state
-            input_.pos_reference = input_.measurement;
-            input_.vel_reference = 0;
-            input_.acc_reference = 0;
-        }
-
-        event_ = NONE;
+        // automatically switch to active after homing
+        status_ = IDLE;
+        event_ = ENABLE;
     }
+
+    if (event_ == START_HOMING && status_ != HOMING && homable_)
+    {
+        status_ = HOMING;
+        homing_pos = raw_measurement;
+        homing_vel = 0;
+    }
+    else if (event_ == ENABLE && status_ != ACTIVE && homed_ == true)
+    {
+        status_ = ACTIVE;
+
+        input_.pos_reference = input_.measurement;
+        input_.vel_reference = 0;
+        input_.acc_reference = 0;
+
+        std::cout << "Controller activated: reset ref to " << input_.pos_reference << std::endl;
+
+    }
+    else if (event_ == SET_ERROR)
+    {
+        status_ = ERROR;
+    }
+    else if (event_ == DISABLE)
+    {
+        status_ = IDLE;
+    }
+
+    if (old_status == ACTIVE && status_ != ACTIVE)
+    {
+        // Just switched to not being active.
+        // TODO: reset controllers
+    }
+
+    event_ = NONE;
 }
 
 // ----------------------------------------------------------------------------------------------------
 
 void SupervisedController::update(double raw_measurement)
 {
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    output_ = 0;
 
-    if (status() == UNINITIALIZED && is_set(raw_measurement))
-    {
-        // First time we receive a measurement while being uninitialized
-        event_ = RECEIVED_MEASUREMENT;
-    }
+    if (!is_set(raw_measurement)) // TODO
+        return;
+
+    if (status_ == UNINITIALIZED)
+        status_ = IDLE;
 
     input_.measurement = raw_measurement + measurement_offset;
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     checkTransitions(raw_measurement);
 

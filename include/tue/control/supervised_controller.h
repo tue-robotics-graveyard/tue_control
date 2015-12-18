@@ -5,7 +5,6 @@
 
 #include <tue/config/configuration.h>
 #include <tue/control/controller_input.h>
-#include <tue/control/fsm.h>
 
 namespace tue
 {
@@ -32,12 +31,11 @@ enum ControllerStatus
 enum ControllerEvent
 {
     NONE = 0,
-    RECEIVED_MEASUREMENT = 1,
     START_HOMING = 2,
     STOP_HOMING = 3,
     SET_ERROR = 4,
-    SET_ACTIVE = 5,
-    SET_INACTIVE = 6
+    ENABLE = 5,
+    DISABLE = 6
 };
 
 // ----------------------------------------------------------------------------------------------------
@@ -90,15 +88,15 @@ public:
 
     void setError(const std::string& error_msg) { event_ = SET_ERROR; error_msg_ = error_msg; }
 
-    void setInactive() { event_ = SET_INACTIVE; }
+    void disable() { event_ = DISABLE; }
 
-    void setActive() { event_ = SET_ACTIVE; }
+    void enable() { event_ = ENABLE; }
 
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Getters
 
-    ControllerStatus status() const { return fsm_.current_state(); }
+    ControllerStatus status() const { return status_; }
 
     const char* status_string() const
     {
@@ -126,11 +124,13 @@ public:
 
     bool is_homed() const { return homed_; }
 
+    bool is_homable() const { return homable_; }
+
 private:
 
     double dt_;
 
-//    ControllerStatus status_;
+    ControllerStatus status_;
 
     ControllerEvent event_;
 
@@ -142,14 +142,13 @@ private:
 
     bool homed_;
 
-    FSM<ControllerStatus, ControllerEvent> fsm_;
-
-    void checkTransitions(double measurement);
-
+    bool homable_;
 
     double error_;
 
     double output_;
+
+    void checkTransitions(double raw_measurements);
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Safety
