@@ -1,14 +1,13 @@
 sudo: required
-language:
-  - cpp
-  - python
-python:
-  - "2.7"
-compiler:
-  - gcc
-  - clang
+dist: trusty
+language: generic
 env:
-  - ROS_DISTRO=hydro
+  - ROS_DISTRO=indigo
+  - ROS_DISTRO=jade
+notifications:
+  email:
+    on_success: change # [always|never|change], default=change
+    on_failure: change # [always|never|change], default=always
 
 before_install:
   - CI_SOURCE_PATH=$(pwd)
